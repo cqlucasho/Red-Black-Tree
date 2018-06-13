@@ -1,0 +1,368 @@
+package main
+
+import (
+	"fmt"
+)
+
+type TreeNode struct {
+	color int
+	value int
+	left *TreeNode
+	right *TreeNode
+	prev *TreeNode
+}
+
+func main() {
+	var arr = []int{50, 25, 100, 10, 40, 60, 150, 5, 15, 30, 45, 55, 70, 110, 170, 29, 140, 105, 130, 76, 74}
+	
+	var parent TreeNode
+	parent.value = arr[0]
+	parent.color = 0
+	parent.left = nil
+	parent.right = nil
+	parent.prev = nil
+	
+	for i:=1; i<len(arr); i++ {
+		insert(&parent, arr[i])
+	}
+	
+	// 先序遍历
+	fmt.Println("先序遍历开始: ")
+	nodeQuery(&parent)
+	
+	del(&parent, 30)
+	fmt.Println("重新遍历一次结果: ")
+	nodeQuery(&parent)
+}
+
+func insert(node *TreeNode, num int) {
+	if node.value > num {
+		leftInsert(node, num)
+	} else {
+		rightInsert(node, num)
+	}
+}
+
+func leftInsert(node *TreeNode, num int) {
+	if node.left == nil {
+		son := TreeNode{ 1, num, nil, nil, node }
+		node.left = &son
+		
+		// 判断爷爷节点是否为根节点
+		if node.prev == nil || node.color == 0 {
+			return
+		} else {
+			checkTree(node.left)
+		}
+	} else {
+		insert(node.left, num)
+	}
+}
+
+func rightInsert(node *TreeNode, num int) {
+	if node.right == nil {
+		son := TreeNode{ 1, num, nil, nil, node }
+		node.right = &son
+		
+		if node.prev == nil || node.color == 0 {
+			return
+		} else {
+			checkTree(node.right)
+		}
+	} else {
+		insert(node.right, num)
+	}
+}
+
+func del(root *TreeNode, num int) {
+	result := getNode(root, num)
+	
+	if result.right == nil && result.left == nil {
+		if result.prev.left == result {
+			result.prev.left = nil
+		} else {
+			result.prev.right = nil
+		}
+		
+	} else if result.right != nil && result.left == nil {
+		result.prev.value = result.right.value
+		result.prev.right = nil
+		
+	} else if result.prev.color == 1 && ((result.right != nil && result.right.right == nil) || (result.left != nil && result.left.right == nil)) {
+		parent := getParent(result)
+		parent.value = result.value
+		
+		if parent.left == result {
+			if result.right != nil {
+				parent.left = result.right
+				parent.left.prev = result.prev
+			} else {
+				parent.left = result.left
+				parent.left.prev = result.prev
+			}
+			
+			parent.left.color = 0
+		} else {
+			if result.right != nil {
+				parent.right = result.right
+				parent.right.prev = result.prev
+			} else {
+				parent.right = result.left
+				parent.right.prev = result.prev
+			}
+			
+			parent.right.color = 0
+		}
+		
+	} else if result.left != nil {
+		maxValueNode := getMax(result.left)
+		parent := getParent(maxValueNode)
+		brother := getBrother(maxValueNode)
+		result.value = maxValueNode.value
+		
+		if result.left == maxValueNode {
+			if maxValueNode.left != nil && brother.color == 0 && parent.color == 1 {
+				brother.color = 0
+				result.left = maxValueNode.left
+				brother.prev = result
+			}
+		} else if maxValueNode.left != nil {
+			parent.right = maxValueNode.left
+			maxValueNode.left.prev = parent
+		} else if maxValueNode.left == nil && brother.color == 0 {
+			son := parent.left
+			leftRotate(parent, parent.left)
+			parent.color = 0
+			son.color = 1
+		}
+	}
+}
+
+func getNode(root *TreeNode, num int) *TreeNode {
+	found := true
+	
+	if root != nil && root.value == num {
+		return root
+	}
+	
+	for found {
+		if root.value == num {
+			found = false
+		}
+		if root.value > num && root.left != nil {
+			root = root.left
+		} else if root.value < num && root.right != nil {
+			root = root.right
+		}
+	}
+	
+	return root
+}
+
+func getMax(node *TreeNode) *TreeNode {
+	found := true
+	
+	for found {
+		if node.right == nil {
+			found = false
+		}
+	}
+	
+	return node
+}
+
+func getGrandpa(node *TreeNode) *TreeNode {
+	if node == nil || node.prev == nil || node.prev.prev == nil {
+		return node
+	}
+	
+	return node.prev.prev
+}
+
+func getParent(node *TreeNode) *TreeNode {
+	if node == nil || node.prev == nil {
+		return node
+	}
+	
+	return node.prev
+}
+
+func getUncle(node *TreeNode) *TreeNode {
+	if node.prev == nil {
+		return node
+	}
+	
+	parent := getParent(node)
+	grandpa := getGrandpa(node)
+	
+	if grandpa != nil {
+		if grandpa.left == parent {
+			return grandpa.right
+		} else {
+			return grandpa.left
+		}
+	}
+	
+	return node
+}
+
+func getBrother(node *TreeNode) *TreeNode {
+	if node.prev == nil {
+		return node
+	}
+	
+	parent := getParent(node)
+	if parent.left == node {
+		return parent.right
+	} else {
+		return parent.left
+	}
+	
+	return node
+}
+
+func rightRotate(parent *TreeNode, son *TreeNode) {
+	parentPrev := parent.prev
+	pos := 0
+	
+	if parentPrev != nil {
+		if parentPrev.left == parent {
+			pos = 1
+		} else {
+			pos = -1
+		}
+	}
+	
+	if son.right != nil {
+		parent.left = son.right
+		son.right = parent
+		parent.prev = son
+	} else {
+		son.right = parent
+		parent.prev = son
+		parent.left = nil
+	}
+	
+	switch pos {
+		case 1:
+			parentPrev.left = son
+			son.prev = parentPrev
+		case -1:
+			parentPrev.right = son
+			son.prev = parentPrev
+		default:
+			break
+	}
+}
+
+func leftRotate(parent *TreeNode, son *TreeNode){
+	parentPrev := parent.prev
+	pos := 0
+	
+	if parentPrev != nil {
+		if parentPrev.left == parent {
+			pos = 1
+		} else {
+			pos = -1
+		}
+	}
+	
+	if son.left != nil {
+		parent.right = son.left
+		son.left = parent
+		parent.prev = son
+	} else {
+		son.left = parent
+		parent.prev = son
+		parent.right = nil
+	}
+	
+	switch pos {
+		case 1:
+			parentPrev.left = son
+			son.prev = parentPrev
+		case -1:
+			parentPrev.right = son
+			son.prev = parentPrev
+		default:
+			break
+	}
+}
+
+func checkTree(node *TreeNode) {
+	grandpa := getGrandpa(node)
+	parent := getParent(node)
+	uncle := getUncle(node)
+	
+	if grandpa == node || parent == node {
+		return
+	} else if parent.color == 0 || node.color == 0 {
+		return
+	} else if node.prev == nil && node.color == 1 {
+		node.color = 0
+		return
+	}
+	
+	if parent.color == 1 && uncle != nil && uncle.color == 1 {
+		parent.color = 0
+		uncle.color = 0
+		grandpa.color = 1
+		
+		if grandpa.prev == nil && grandpa.color == 1 {
+			grandpa.color = 0
+		} else {
+			checkTree(grandpa)
+		}
+	} else if parent.color == 1 && uncle != nil && uncle.color == 0 {
+		if parent.left == node {
+			rightRotate(parent, node)
+			leftRotate(grandpa, node)
+			node.color = 0
+			grandpa.color = 1
+		} else {
+			leftRotate(grandpa.prev, grandpa)
+			grandpa.color = 0
+			grandpa.left.color = 1
+		}
+	} else if parent.color == 1 && uncle == nil {
+		if grandpa.left == parent {
+			if parent.left == node {
+				rightRotate(grandpa, parent)
+				parent.color = 0
+				grandpa.color = 1
+			} else {
+				leftRotate(parent, node)
+				rightRotate(grandpa, node)
+				node.color = 0
+				grandpa.color = 1
+			}
+		} else {
+			if parent.right == node {
+				leftRotate(grandpa, parent)
+				parent.color = 0
+				grandpa.color = 1
+			} else {
+				rightRotate(parent, node)
+				leftRotate(grandpa, node)
+				node.color = 0
+				grandpa.color = 1
+			}
+		}
+	}
+}
+
+func nodeQuery(node *TreeNode) {
+	color := ""
+	if node == nil {
+		return
+	}
+	
+	if node.color == 1 {
+		color = "red"
+	} else {
+		color = "black"
+	}
+	fmt.Print("value:", color, ", color:", node.value,"\t\n")
+	nodeQuery(node.left)
+	nodeQuery(node.right)
+}
