@@ -48,7 +48,7 @@ func leftInsert(node *TreeNode, num int) {
 		son := TreeNode{ 1, num, nil, nil, node }
 		node.left = &son
 		
-		// 判断爷爷节点是否为根节点
+		// 判断父节点是否为根节点
 		if node.prev == nil || node.color == 0 {
 			return
 		} else {
